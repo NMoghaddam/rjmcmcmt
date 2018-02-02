@@ -40,6 +40,13 @@ extern "C"{
 #include <rjmcmc/rjmcmc_util.h>
 }
 
+void saveacceptedmodel(part1dfm* p){
+	std::string filename = strprint("chains_%02d.txt", p->process);	
+	FILE* fp = fopen(filename.c_str(), "a+");
+	fprintf(fp,"%d %d\n", p->process, p->index);
+	fclose(fp);
+}
+
 class cRjMcMCMT{
 
 private:
