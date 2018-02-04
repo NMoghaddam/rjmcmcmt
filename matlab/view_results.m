@@ -9,7 +9,7 @@ depthplotlim = [0 500];
 resplotlim   = [0.1 100000];
 
 syntheticdir = '..\synthetic\edifiles\';
-resultsdir   = '..\examples\eucla\output\';
+resultsdir   = '..\examples\test\output\';
 sdir = dir([resultsdir '*']);
 
 for si=1:1:length(sdir)
@@ -131,7 +131,7 @@ for si=1:1:length(sdir)
     
     %%
     close(gcf);
-    bkgcolor = [1 1 1]; fgcolor  = [0 0 0]; cmap = gray(256); cmap=flip(cmap,1);
+    bkgcolor = [1 1 1]; fgcolor  = [0 0 0]; cmap = gray(256); cmap=flipdim(cmap,1);
     %bkgcolor = [0 0 0]; fgcolor  = [1 1 1]; cmap = gray(256);
     figure;
     paperwidth  = 25;

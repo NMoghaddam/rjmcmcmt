@@ -8,8 +8,8 @@
 		UseDataType   = Impedance
 		OutputDirectory    = output\
 
-		BurninSamples      = 50000
-		TotalSamples       = 2000000
+		BurninSamples      = 500
+		TotalSamples       = 2000
 		
 		MaxLayers          = 20
 		MaxInterfaceDepth  = 4000

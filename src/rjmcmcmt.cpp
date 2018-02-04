@@ -40,13 +40,6 @@ extern "C"{
 #include <rjmcmc/rjmcmc_util.h>
 }
 
-void saveacceptedmodel(part1dfm* p){
-	std::string filename = strprint("chains_%02d.txt", p->process);	
-	FILE* fp = fopen(filename.c_str(), "a+");
-	fprintf(fp,"%d %d\n", p->process, p->index);
-	fclose(fp);
-}
-
 class cRjMcMCMT{
 
 private:
@@ -256,7 +249,7 @@ public:
 		cRjMcMCMT* me = (cRjMcMCMT*)userarg;
 		size_t nprops = (size_t)me->nlocal_parameters;
 		std::vector<double> depths(partition_boundaries, partition_boundaries + npartitions);
-		size_t nlayers = depths.size() - 1;
+		size_t nlayers = depths.size() - 1;		
 		std::vector<std::vector<double>> props(nlayers);
 		for (size_t li = 0; li < nlayers; li++){
 			const double* p = value_at(state, depths[li]);
@@ -298,8 +291,7 @@ public:
 				m.print();
 				printf("\n");
 			}
-		}
-
+		}				
 		return 0.5*misfit;
 	}
 
@@ -474,6 +466,12 @@ public:
 		return 0;
 	}
 };
+
+extern "C" void get_output_dir(void* userarg, char* od){
+	cRjMcMCMT* me = (cRjMcMCMT*)userarg;
+	std::strcpy(od,me->StationDirectory().c_str());
+}
+
 
 int main(int argc, char** argv)
 {		
