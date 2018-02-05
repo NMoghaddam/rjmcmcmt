@@ -25,6 +25,8 @@ public:
 	std::vector<double> resistivity;
 	std::vector<double> thickness;
 
+	ResistivityModel(){};
+
 	ResistivityModel(const std::string& modelfilename){
 		read_model_file(modelfilename);
 	}

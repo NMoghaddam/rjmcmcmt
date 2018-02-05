@@ -43,7 +43,13 @@ extern "C"{
 class cRjMcMCMT{
 
 private:
-		
+	std::vector<double> dpre_last;
+	std::vector<double> dpre_last_accepted;
+	ResistivityModel model_last;
+	ResistivityModel model_last_accepted;
+	double misfit_last;
+	double misfit_last_accepted;
+	
 
 	cEDIFile E;
 	MTDataType  DataType;	
@@ -86,6 +92,8 @@ public:
 		return OutputDirectory + E.StationName() + pathseparatorstring();
 	};
 
+	const size_t ndata() const { return dobs.size(); }
+	
 	void parse_options(const cBlock& b){
 
 		std::string usedatatype;
@@ -263,7 +271,7 @@ public:
 			depths[li]   = std::pow(10.0,depths[li]);
 		}
 		
-		ResistivityModel m(depths, props);
+		ResistivityModel m(depths, props);		
 		std::vector<double> dpre;
 		if(me->DataType == MT_DT_IMPEDANCE){
 			dpre = m.model_impedance_fieldunits_as_vector(me->E.freq);
@@ -291,7 +299,17 @@ public:
 				m.print();
 				printf("\n");
 			}
-		}				
+		}		
+
+		me->model_last = m;
+		me->dpre_last  = dpre;
+		me->misfit_last = misfit;
+
+		if (me->dpre_last_accepted.empty()){
+			me->flag_as_accepted();
+		}
+		
+
 		return 0.5*misfit;
 	}
 
@@ -465,6 +483,49 @@ public:
 		}
 		return 0;
 	}
+
+	void flag_as_accepted(){
+		dpre_last_accepted   = dpre_last;
+		model_last_accepted  = model_last;
+		misfit_last_accepted = misfit_last;
+	}
+
+	void savetochainfile()
+	{
+		ResistivityModel& m = model_last_accepted;
+		static int  pass = 0;
+		static std::string filename;
+		FILE* fp;
+		if (pass == 0){						
+			int rank;			
+			MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+			filename = StationDirectory() + strprint("chain.%03d.txt",rank);
+			fp = fopen(filename.c_str(), "w");
+		}
+		else{
+			fp = fopen(filename.c_str(), "a");
+		}
+		pass++;
+
+		const int nlayers = m.resistivity.size();
+		fprintf(fp, "%d %lf %d", pass, misfit_last_accepted, nlayers);
+				
+		for (int i = 0; i < nlayers-1; i++){
+			fprintf(fp, " %6g", m.thickness[i]);
+		}
+
+		for (int i = 0; i < nlayers; i++){
+			fprintf(fp, " %6g", m.resistivity[i]);
+		}
+
+		const int nd = dpre_last_accepted.size();
+		for (int i = 0; i < nd; i++){
+			fprintf(fp, " %6g", dpre_last_accepted[i]);
+		}
+
+		fprintf(fp, "\n");
+		fclose(fp);		
+	}
 };
 
 extern "C" void get_output_dir(void* userarg, char* od){
@@ -472,6 +533,20 @@ extern "C" void get_output_dir(void* userarg, char* od){
 	std::strcpy(od,me->StationDirectory().c_str());
 }
 
+extern "C" int get_ndata(void* user_args){
+	cRjMcMCMT* me = (cRjMcMCMT*)user_args;
+	return me->ndata();	
+}
+
+extern "C" void flag_as_accepted(void* user_args){
+	cRjMcMCMT* me = (cRjMcMCMT*)user_args;
+	me->flag_as_accepted();
+}
+
+extern "C" void savetochainfile(void* user_args){
+	cRjMcMCMT* me = (cRjMcMCMT*)user_args;
+	me->savetochainfile();
+}
 
 int main(int argc, char** argv)
 {		
