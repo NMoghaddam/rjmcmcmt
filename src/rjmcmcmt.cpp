@@ -351,8 +351,11 @@ public:
 		}
 
 		save_convergences(results);
+		save_npartitions_histograms(results);
+		save_partition_depth_histograms(results);
+		save_property_histograms(results);
 		if (cMpiEnv::world_rank() == mpiroot) save_results(results);
-		
+		resultset1dfm_destroy(results);
 		return 0;
 	}
 
@@ -375,56 +378,29 @@ public:
 		return true;
 	}
 
-	bool save_convergences(resultset1dfm_t* results){
-		const double* v = resultset1dfm_get_misfit(results);		
-		std::string filename = StationDirectory() + "misfit" + strprint(".%03d", cMpiEnv::world_rank()) + ".txt";
-		//rjmcmc_save_vector(filename.c_str(), v, totalsamples);
-
-		//Only save every 100th sample to limit file size, but save sample number as well
-		FILE* fp=fileopen(filename,"w");
-		for(int i=0; i<totalsamples; i=i+100){
-			fprintf(fp,"%d %lf\n",i+1,v[i]);
-		}
-		fclose(fp);
-		return true;
-	}
-	
 	bool save_results(resultset1dfm_t* results){
-				
+
 		std::string filename;
 
-		double* ycoords = rjmcmc_create_array_1d(nysamples);		
+		double* ycoords = rjmcmc_create_array_1d(nysamples);
 		double* xcoords = rjmcmc_create_array_1d(nxsamples);
 
 		resultset1dfm_fill_xcoord_vector(results, xcoords, &nxsamples);
 		filename = StationDirectory() + "depth_bins.txt";
 		rjmcmc_save_vector(filename.c_str(), xcoords, nxsamples);
-		
-		const int* iv = resultset1dfm_get_partitions(results);
-		filename = StationDirectory() + "partitions.txt";
-		rjmcmc_save_int_vector(filename.c_str(), iv, totalsamples);
-		filename = StationDirectory() + "partitions_hist.txt";
-		rjmcmc_save_int_vector_as_histogram(filename.c_str(), 2, max_part, iv, totalsamples);
-		
-		iv = resultset1dfm_get_partition_x_histogram(results);		
-		filename = StationDirectory() + "partitions_depth_hist.txt";
-		rjmcmc_save_int_coords(filename.c_str(), xcoords, iv, nxsamples);
-		
-		save_property_histograms(results);
-		
-		//Property bins
 
+		//Property bins
 		for (int k = 0; k < nlocal_parameters; k++){
 			int pi = k + 1;
 			resultset1dfm_fill_ycoord_vector(results, k, ycoords, &nysamples);
-			filename = StationDirectory() + strprint("prop_%d_bins.txt", pi);			
+			filename = StationDirectory() + strprint("prop_%d_bins.txt", pi);
 			rjmcmc_save_vector(filename.c_str(), ycoords, nysamples);
 		}
 
 		//Mean
 		for (int k = 0; k < nlocal_parameters; k++){
 			int pi = k + 1;
-			const double* v = resultset1dfm_get_local_parameter_mean(results, k);			
+			const double* v = resultset1dfm_get_local_parameter_mean(results, k);
 			filename = StationDirectory() + strprint("prop_%d_mean.txt", pi);
 			rjmcmc_save_coords(filename.c_str(), xcoords, v, nxsamples);
 		}
@@ -440,7 +416,7 @@ public:
 		//Mode
 		for (int k = 0; k < nlocal_parameters; k++){
 			int pi = k + 1;
-			const double* v = resultset1dfm_get_local_parameter_mode(results, k);			
+			const double* v = resultset1dfm_get_local_parameter_mode(results, k);
 			filename = StationDirectory() + strprint("prop_%d_mode.txt", pi);
 			rjmcmc_save_coords(filename.c_str(), xcoords, v, nxsamples);
 		}
@@ -462,15 +438,52 @@ public:
 		}
 		rjmcmc_destroy_array_1d(xcoords);
 		rjmcmc_destroy_array_1d(ycoords);
-		resultset1dfm_destroy(results);
 		return 0;
 	}
 
+	bool save_convergences(resultset1dfm_t* results){
+		const double* v = resultset1dfm_get_misfit(results);		
+		std::string filename = StationDirectory() + "misfit" + strprint(".%03d", cMpiEnv::world_rank()) + ".txt";
+		//rjmcmc_save_vector(filename.c_str(), v, totalsamples);
+
+		//Only save every 100th sample to limit file size, but save sample number as well
+		FILE* fp=fileopen(filename,"w");
+		for(int i=0; i<totalsamples; i=i+100){
+			fprintf(fp,"%d %lf\n",i+1,v[i]);
+		}
+		fclose(fp);
+		return true;
+	}
+
+	bool save_npartitions_histograms(resultset1dfm_t* results){
+		const int* iv = resultset1dfm_get_partitions(results);
+		
+		std::string filename = StationDirectory() + "npartitions" + strprint(".%03d", cMpiEnv::world_rank()) + ".txt";
+		rjmcmc_save_int_vector(filename.c_str(), iv, totalsamples);
+		
+		filename = StationDirectory() + "npartitions_hist" + strprint(".%03d", cMpiEnv::world_rank()) + ".txt";
+		rjmcmc_save_int_vector_as_histogram(filename.c_str(), 2, max_part, iv, totalsamples);
+		
+		return true;
+	}
+
+	bool save_partition_depth_histograms(resultset1dfm_t* results){
+		double* xcoords = rjmcmc_create_array_1d(nxsamples);
+		resultset1dfm_fill_xcoord_vector(results, xcoords, &nxsamples);
+		
+		const int* iv = resultset1dfm_get_partition_x_histogram(results);		
+		std::string filename  = StationDirectory() + "partitions_depth_hist" + strprint(".%03d", cMpiEnv::world_rank()) + ".txt";
+		rjmcmc_save_int_coords(filename.c_str(), xcoords, iv, nxsamples);
+		
+		rjmcmc_destroy_array_1d(xcoords);
+		return true;		
+	}
+	
 	int save_property_histograms(resultset1dfm_t* results){
 
 		for (int k = 0; k < nlocal_parameters; k++){
 			int pi = k + 1;
-			std::string filename = StationDirectory()+strprint("prop_%d_hist.txt", pi);
+			std::string filename = StationDirectory() + strprint("prop_%d_hist.%03d.txt", pi, cMpiEnv::world_rank());			
 			FILE* fp = fileopen(filename, "w");
 			const int** h = resultset1dfm_get_local_parameter_histogram(results, k);
 			for (int i = 0; i < nxsamples; i++){
@@ -507,19 +520,19 @@ public:
 		}
 		pass++;
 
-		const int nlayers = m.resistivity.size();
-		fprintf(fp, "%d %lf %d", pass, misfit_last_accepted, nlayers);
+		const size_t nlayers = m.resistivity.size();
+		fprintf(fp, "%d %lf %lu", pass, misfit_last_accepted, nlayers);
 				
-		for (int i = 0; i < nlayers-1; i++){
+		for (size_t i = 0; i < nlayers-1; i++){
 			fprintf(fp, " %6g", m.thickness[i]);
 		}
 
-		for (int i = 0; i < nlayers; i++){
+		for (size_t i = 0; i < nlayers; i++){
 			fprintf(fp, " %6g", m.resistivity[i]);
 		}
 
-		const int nd = dpre_last_accepted.size();
-		for (int i = 0; i < nd; i++){
+		const size_t nd = dpre_last_accepted.size();
+		for (size_t i = 0; i < nd; i++){
 			fprintf(fp, " %6g", dpre_last_accepted[i]);
 		}
 
@@ -535,7 +548,7 @@ extern "C" void get_output_dir(void* userarg, char* od){
 
 extern "C" int get_ndata(void* user_args){
 	cRjMcMCMT* me = (cRjMcMCMT*)user_args;
-	return me->ndata();	
+	return (int) me->ndata();	
 }
 
 extern "C" void flag_as_accepted(void* user_args){
