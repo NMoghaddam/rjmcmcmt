@@ -483,7 +483,7 @@ public:
 
 		for (int k = 0; k < nlocal_parameters; k++){
 			int pi = k + 1;
-			std::string filename = StationDirectory() + strprint("prop_%d_hist.%03d.txt", pi, cMpiEnv::world_rank());			
+			std::string filename = StationDirectory() + strprint("prop_%d_hist.%03d.txt", pi, cMpiEnv::world_rank());
 			FILE* fp = fileopen(filename, "w");
 			const int** h = resultset1dfm_get_local_parameter_histogram(results, k);
 			for (int i = 0; i < nxsamples; i++){
